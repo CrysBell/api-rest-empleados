@@ -14,17 +14,17 @@ import com.example.entities.Empleado;
 
 public interface EmpleadoDao  extends JpaRepository<Empleado, Integer>{
     // Metodo 1. Recupera los eempleados paginados
-    @Query(value = "select e from Empleado e left join fetch e.empleado", 
-        countQuery = "select count(p) from Empleado e left join e.empleado"
+    @Query(value = "select e from Empleado e left join fetch e.departamento", 
+        countQuery = "select count(e) from Empleado e"
     )
     public Page<Empleado> findAll(Pageable pageable);
 
     // Metodo 2. Recupera los productos ordenados, sin paginacion
-    @Query(value = "select e from Empleado e left join fetch e.empleado")
+    @Query(value = "select e from Empleado e left join fetch e.departamento")
     public List<Empleado> findAll(Sort sort);
 
     // Metodo 3. Dado el id de un empleado que se recibe como parametro
     // recupera el producto con su departamento correspondiente
-    @Query(value = "select e from Empleado e left join fetch d.departamento where p.id = :id")
+    @Query(value = "select e from Empleado e left join fetch e.departamento where e.id = :id")
     public Empleado findById(int id);
 }

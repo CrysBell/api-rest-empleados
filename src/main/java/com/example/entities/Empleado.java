@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import com.example.model.Genero;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -32,11 +33,11 @@ import lombok.ToString;
 @Table(name = "empleados")
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 @Getter
 @Setter
-@Builder
+@ToString
 @EqualsAndHashCode
+@Builder
 public class Empleado implements Serializable{
     private static final long serialVersionUID = 1L;
 
@@ -64,7 +65,9 @@ public class Empleado implements Serializable{
    
     private BigDecimal salario;
 
+    @NotNull(message = "El departamento es requerido")
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"hibernateLazyInitializer","handler"})
     private Departamento departamento;
 
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL, mappedBy = "empleado")
@@ -75,5 +78,4 @@ public class Empleado implements Serializable{
     @Builder.Default
     private Set<Correo> emails = new HashSet<>();
 
-    // private String foto;
 }
