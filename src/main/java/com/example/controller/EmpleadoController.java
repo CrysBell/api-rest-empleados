@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +13,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,9 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.entities.Empleado;
 import com.example.services.EmpleadoService;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 
 /**
@@ -153,4 +159,47 @@ public class EmpleadoController {
 
         return responseEntity;
     }
+
+ @PostMapping
+    public ResponseEntity<Map<String, Object>> saveEmpleado(
+            @Valid @RequestBody Empleado empleado,
+            BindingResult result) {
+        List<String> mensajesDeError = new ArrayList<>();
+
+        Map<String, Object> responseAsMap = new HashMap<>();
+
+        ResponseEntity<Map<String, Object>> responseEntity = null;
+
+        // Primero comprobar si hay errorres en el producto recibido
+        if (result.hasErrors()) {
+            // Recuperamos los errores que tiene el producto recibido y se lo informamos al
+            // que realizó la petición (request) de persistir el producto
+            List<ObjectError> objectErrors = result.getAllErrors();
+
+            objectErrors.stream().forEach(objectError -> mensajesDeError.add(objectError.getDefaultMessage()));
+
+            responseAsMap.put("El empleado tiene los siguientes errores: ", mensajesDeError);
+
+            responseAsMap.put("Empleado mal guardado", empleado);
+
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.BAD_REQUEST);
+
+            return responseEntity;
+        }
+
+        // Pesistimos el producto porque ya esta bien formado
+        try {
+            Empleado empleadoPersistido = empleadoService.save(empleado);
+            responseAsMap.put("mensaje: ", "Empleado persistido exitosamente");
+            responseAsMap.put("empleado Persistido: ", empleadoPersistido);
+            responseEntity = new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.CREATED);
+        } catch (DataAccessException e) {
+            responseAsMap.put("Error Grave", "No ha podido ser guardado el empleado y la causa más probable es: "
+                    + e.getMostSpecificCause().getMessage());
+            responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return responseEntity;
+    }
+
+
 }
