@@ -1,0 +1,156 @@
+package com.example.controller;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.entities.Empleado;
+import com.example.services.EmpleadoService;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+
+/**
+* La anotacion @RestController es para que todos los metodos que van a ser
+* creados dentro de este
+* controlador y reciben peticiones a través del protocolo HTTP, mediante los
+* verbos correspondientes
+* (GET, POST, PUT, DELETE, PATCH, etc) devuelvan o reciban datos en formato de
+* JSON (JavaScript Object Notation)
+*/
+/**
+* Una API REST esta orientada al recurso, es decir, que el controlador necesita
+* que se le especifique
+* que recurso va a responder, por ejemplo en esto seria /products, y en
+* dependencia del verbo del protocolo
+* HTTP se estaria haciendo una peticion (request) contreta. Por ejemplo: Si el
+* verbo es GET, significa
+* que estamos solicitando todos los productos al recurso /products. Si el
+* verbo es POST significa que queremos
+* recibir un producto en formato JSON, en el cuerpo de la peticion (request) y
+* persistirlo (guardarlo)
+* en las tablas correspondientes
+*/
+@RequestMapping("/empleados")
+@RequiredArgsConstructor
+@RestController
+public class EmpleadoController {
+
+    private final EmpleadoService empleadoService;
+
+
+        /**
+     * 
+     * IMPORTANTE!!!
+     * 
+     * Una API REST tiene que devolver informacion respecto a como ha sido
+     * solucionada la peticion (request),
+     * por ejemplo: el codigo 200 significa estado OK de la peticion, el codido 201
+     * significaria CREATED,
+     * el codigo 500 significaria que el servidor no ha podido cumplimentar la
+     * peticion, el codigo 401 NO ENCONTRADO,
+     * el codigo 403 prohibido, ect. Todos estos codigos se pueden encontrar en el
+     * sitio de W3Schools
+     * 
+     * https://www.w3schools.com/tags/ref_httpmessages.asp
+     * 
+     */
+    /**
+     * El metodo siguiente va a responder a una peticion (request) del tipo:
+     * 
+     * http://localhost:8080/productos?page=0&size=3
+     * 
+     * Donde los parametros page y size seran utilizados para la paginacion, y no
+     * seran requeridos, es decir,
+     * que no son obligatorios que se suministren. Y en caso de NO ser suministrados
+     * (page y size),
+     * los productos se van a devolver ordenados.
+     * 
+     * 
+     * 
+     * ¡¡¡¡¡¡¡¡¡¡¡¡¡¡¡DE EXAMEN!!!!!!!
+     * Utilizamos RequestParam ya que en la ruta despues del signo de interrogacion
+     * lo que viene es un PARAMETRO,
+     * si no hay informacion con un signo de interrogacion, es una variable y se usa
+     * PathVariable
+     * 
+     * Es aconsejable hacer consultas a parametro primitivo en la medida de lo
+     * posible ya
+     * que las consultas a objetos requieren que el sistema realice una mayor carga
+     * de informacion
+     */
+    @GetMapping
+    public ResponseEntity<Map<String, Object>> dameEmpleados(
+        @RequestParam(name = "page", required = false) Integer page,
+        @RequestParam(name = "size", required = false) Integer size) {
+
+        Sort sort = Sort.by("name");
+
+        List <Empleado> empleados = null;
+
+        Map<String, Object> responseAsMap = new HashMap<>();
+
+        if (page != null && size != null) {
+            Pageable pageable = PageRequest.of(page, size, sort);
+           
+            Page<Empleado> empleadoPage = empleadoService.findAll(pageable);
+            empleados = empleadoPage.getContent();
+            responseAsMap.put("empleados", empleados);
+        } else {
+            empleados = empleadoService.findAll(sort);
+
+            responseAsMap.put("empleados", empleados);
+        }
+
+        return new ResponseEntity<Map<String, Object>>(responseAsMap, HttpStatus.OK);
+        }
+
+
+
+    public ResponseEntity<Map<String, Object>> findEmpleadoById(
+        @PathVariable(name = "id", required = true) int empleado_id ){
+        
+        Map<String, Object> responseAsMap = new HashMap<>();
+
+        ResponseEntity<Map<String, Object>> responseEntity = null;
+
+        try {
+            Empleado empleado = empleadoService.findById(empleado_id);
+            if (empleado != null) {
+                String successMessage = "mensaje todo OK " + empleado_id + " ha sido encontrado";
+                
+                responseAsMap.put("successMessage", successMessage);
+                responseAsMap.put("empleado encontrado", empleado);
+                responseEntity = new ResponseEntity<Map<String,Object>>(responseAsMap, HttpStatus.OK);
+            }
+            else{
+                String failureMessage = "No ha sido encontrado ningun empleado con id: "
+                + empleado_id;
+                responseAsMap.put("Error: ", failureMessage);
+                responseEntity = new ResponseEntity<>(responseAsMap, HttpStatus.NOT_FOUND);   
+            }
+        } catch (DataAccessException e) {
+             String errorMessage = "Error grave al buscar el producto con id " 
+            + empleado_id + ", y la causa mas probable es: " + e.getMostSpecificCause().getMessage();
+            responseAsMap.put("Error grave: ", errorMessage);
+            responseEntity = new ResponseEntity<>(responseAsMap,
+            HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return responseEntity;
+    }
+}

@@ -2,6 +2,8 @@ package com.example.entities;
 import java.io.Serializable;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -46,5 +48,6 @@ public class Departamento implements Serializable {
     la relacion de clave externa, que al igual que en SQL es en el lado de muchos */
     
     @OneToMany(fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, mappedBy = "departamento")
+    @JsonIgnore
     private List<Empleado> empleados;
 }
