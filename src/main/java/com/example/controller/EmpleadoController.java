@@ -1,5 +1,6 @@
 package com.example.controller;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,11 +18,16 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.entities.Empleado;
+import com.example.models.FileUploadResponse;
 import com.example.services.EmpleadoService;
+import com.example.utilities.FileUploadUtil;
 
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,11 +47,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 /**
 * Una API REST esta orientada al recurso, es decir, que el controlador necesita
 * que se le especifique
-* que recurso va a responder, por ejemplo en esto seria /products, y en
+* que recurso va a responder, por ejemplo en esto seria /empleado, y en
 * dependencia del verbo del protocolo
 * HTTP se estaria haciendo una peticion (request) contreta. Por ejemplo: Si el
 * verbo es GET, significa
-* que estamos solicitando todos los productos al recurso /products. Si el
+* que estamos solicitando todos los productos al recurso /empleado. Si el
 * verbo es POST significa que queremos
 * recibir un producto en formato JSON, en el cuerpo de la peticion (request) y
 * persistirlo (guardarlo)
@@ -57,6 +63,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public class EmpleadoController {
 
     private final EmpleadoService empleadoService;
+    private final FileUploadUtil fileUploadUtil;
 
 
         /**
@@ -160,15 +167,17 @@ public class EmpleadoController {
         return responseEntity;
     }
 
- @PostMapping
+    @PostMapping(consumes = "multipart/form-data")
+    @Transactional
     public ResponseEntity<Map<String, Object>> saveEmpleado(
             @Valid @RequestBody Empleado empleado,
-            BindingResult result) {
-        List<String> mensajesDeError = new ArrayList<>();
+            BindingResult result,
+            @RequestPart (name = "file", required = false) MultipartFile imagenDelEmpleado) throws IOException{
+            List<String> mensajesDeError = new ArrayList<>();
 
-        Map<String, Object> responseAsMap = new HashMap<>();
+             Map<String, Object> responseAsMap = new HashMap<>();
 
-        ResponseEntity<Map<String, Object>> responseEntity = null;
+            ResponseEntity<Map<String, Object>> responseEntity = null;
 
         // Primero comprobar si hay errorres en el producto recibido
         if (result.hasErrors()) {
@@ -188,6 +197,30 @@ public class EmpleadoController {
         }
 
         // Pesistimos el producto porque ya esta bien formado
+        
+        /**
+         * Para guardar la imagen del producto, en primer lugar le agregaremos como prefijo un codigo
+         * alfanumerico (de letras y numeros), generado aleatoriamente a partir de un metodo que se
+         * encuentre en la biblioteca Apache Commons Lang3, que hay que descargar la dependencia desde
+         * el repositorio central de maven y agregarla al pom.xml
+         */
+            if (imagenDelEmpleado != null && !imagenDelEmpleado.isEmpty()) {
+                          String fileCode = fileUploadUtil.saveFile(imagenDelEmpleado.getOriginalFilename(), imagenDelEmpleado);
+
+            empleado.setEmpleadoImage(fileCode + imagenDelEmpleado.getOriginalFilename());
+
+                   FileUploadResponse fileUploadResponse = new FileUploadResponse(
+                    fileCode + '-' + imagenDelEmpleado.getOriginalFilename(),
+                    "/empleados/fileDownload",
+                    imagenDelEmpleado.getSize());
+
+            responseAsMap.put("informacion de la imagen del empleado", fileUploadResponse);
+        
+        
+            }
+
+
+
         try {
             Empleado empleadoPersistido = empleadoService.save(empleado);
             responseAsMap.put("mensaje: ", "Empleado persistido exitosamente");
